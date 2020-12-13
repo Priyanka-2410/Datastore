@@ -28,7 +28,6 @@ class Services
         	return true;
         else//if time exceeded data will be deleted
         {
-        	System.out.println("Time to live for the key is over");
         	Delete d = new Delete();
         	d.delete(s);
         	return false;
@@ -69,8 +68,6 @@ class Services
 	}
 	boolean calculateTime_to_Live(int sec1,int sec2,String time_to_live)
 	{
-		//System.out.println("Time to Live "+Math.abs(sec2-sec1)/60);
-		//System.out.println("sec1: "+sec1+" "+"sec2 "+sec2);
 		if((Math.abs(sec2-sec1)/60) >= Integer.parseInt(time_to_live))
 		{
 			return false;
@@ -86,17 +83,15 @@ class Services
 	    String s;
 	      while((s=br.readLine())!=null)   
 	      {
-	    	 //System.out.println("Entering search loop");
 	         String k=getKey(s);  //getting the key
 	         k=k.substring(1,k.length()-1);
 	         System.out.println(s);
 	         boolean key_check = k.equals(key);
 	         boolean time_check = timeTOLive(s);
-	         //System.out.println(key_check+" "+time_check);
 	          if (key_check && time_check)   //checking for the key and its time to live property
-             {
-               return s;  
-             }
+             	{
+               		return s;  
+                }
 	      }
 	      //br.close();
 		}
@@ -124,14 +119,10 @@ class Create extends Services
 					String val = search(f,k);
 					if(val==null)
 					{
-						//System.out.println(str);
-						//System.out.println("Openning file");
-						FileWriter fw=new FileWriter("datastore.txt");
-						//BufferedWriter bw = new BufferedWriter(fw);
+					FileWriter fw=new FileWriter("datastore.txt");
 				        fw.write(str);
-			           //bw.write(str);
-			           fw.flush();
-			           System.out.println("Created Successfully");
+			                fw.flush();
+			                System.out.println("Created Successfully");
 					}
 					else
 					{
@@ -181,8 +172,7 @@ class Create extends Services
                 write_file+=str+" ";
                 write_file+=e.curr_time+" ";
                 write_file+=Integer.toString(e.timeToLive);
-                writeFile(e.key,write_file);
-               // System.out.println(write_file);
+                writeFile(e.key,write_file);//writing the content to the file
 				}
 		//sc.close();
 	}
@@ -234,10 +224,8 @@ class Delete extends Services
 	                 if (k.equals(delete_key))   //Search for the given word
 	                 {
 	                	 System.out.println("Deleted "+delete_key);
-	                	// writer.write("");  
-	                	 writer.write(s.replaceAll(s," "));
-	                	 //writer.write(s + System.getProperty("line.separator"));   
-	                	    return;
+	                	 writer.write(s + System.getProperty("line.separator"));   
+	                	  return;
 	                 }
 	      }
 		}
