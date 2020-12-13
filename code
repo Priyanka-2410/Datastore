@@ -1,0 +1,300 @@
+import java.util.*;
+import java.io.*;
+import org.json.*;
+import java.awt.*;
+import org.json.simple.JSONValue;  
+import java.time.LocalDateTime;  
+import java.time.format.DateTimeFormatter;  
+class Element
+{
+	String key;
+	JSONObject value;
+	int timeToLive;
+	String curr_time;
+}
+class Services
+{
+	public boolean timeTOLive(String s)//calculates time to live property
+	{
+		try
+		{
+		LocalDateTime now = LocalDateTime.now();  
+		DateTimeFormatter format = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");  
+        String t = now.format(format);//current time
+        String min =  getMin(s);
+        int s1 = Integer.parseInt(min.substring(3,5));//calculates the time when it is created
+        int s2 = Integer.parseInt(t.substring(18,t.length()));
+        if(calculateTime_to_Live(s1,s2,s.substring(s.length()-1,s.length())))//checking for timetolive
+        	return true;
+        else//if time exceeded data will be deleted
+        {
+        	System.out.println("Time to live for the key is over");
+        	Delete d = new Delete();
+        	d.delete(s);
+        	return false;
+        }
+	}
+		catch(Exception e)
+		{
+			System.out.println("Time_to_Live Exception "+e);
+		}
+		return false;
+	}
+	public String getKey(String s)//return key from a line
+	{
+		String str="";
+		for(int i=1;i<s.length();i++)
+		{
+			if(s.charAt(i)==':')
+				return str;
+			else
+				str+=Character.toString(s.charAt(i));
+		}
+		return str;
+	}
+	String getMin(String s)
+	{
+		int ws= 0;
+		String str="";
+		for(int i=0;i<s.length();i++)
+		{
+			if(ws==1)
+			{
+				str+=Character.toString(s.charAt(i));
+			}
+			if(s.charAt(i)==' ')
+				ws++;
+		}
+		return str;
+	}
+	boolean calculateTime_to_Live(int sec1,int sec2,String time_to_live)
+	{
+		//System.out.println("Time to Live "+Math.abs(sec2-sec1)/60);
+		//System.out.println("sec1: "+sec1+" "+"sec2 "+sec2);
+		if((Math.abs(sec2-sec1)/60) >= Integer.parseInt(time_to_live))
+		{
+			return false;
+		}
+		return true;
+	}
+	String search(File f,String key)
+	{
+		try
+		{
+		FileReader fr = new FileReader(f);  //Creation of File Reader object
+	    BufferedReader br = new BufferedReader(fr); //Creation of BufferedReader object
+	    String s;
+	      while((s=br.readLine())!=null)   
+	      {
+	    	 //System.out.println("Entering search loop");
+	         String k=getKey(s);  //getting the key
+	         k=k.substring(1,k.length()-1);
+	         System.out.println(s);
+	         boolean key_check = k.equals(key);
+	         boolean time_check = timeTOLive(s);
+	         //System.out.println(key_check+" "+time_check);
+	          if (key_check && time_check)   //checking for the key and its time to live property
+             {
+               return s;  
+             }
+	      }
+	      //br.close();
+		}
+		catch(Exception e)
+		{
+			System.out.println("Exception in search "+e);
+		}
+		
+			return null;
+		
+	}
+}
+class Create extends Services
+{
+	TreeMap<String,String> map = new TreeMap<String,String>();
+	void writeFile(String k,String str)
+	{
+		try
+		{
+			File f = new File("datastore.txt");//opening a file
+			boolean check = f.createNewFile();
+				
+				if(f.length()/(1024*1024) < 1000)//calculating the size of file
+				{
+					String val = search(f,k);
+					if(val==null)
+					{
+						//System.out.println(str);
+						//System.out.println("Openning file");
+						FileWriter fw=new FileWriter("datastore.txt");
+						//BufferedWriter bw = new BufferedWriter(fw);
+				        fw.write(str);
+			           //bw.write(str);
+			           fw.flush();
+			           System.out.println("Created Successfully");
+					}
+					else
+					{
+						System.out.println("Key already exists");
+					}
+				}
+				else
+				{
+					System.out.println("File size eexceeded");
+				}
+			 
+		}
+		catch(Exception e)
+		{
+			System.out.println("Exception in write()"+e);
+		}
+	}
+	void create()
+	{
+	try
+	{
+		Scanner sc = new Scanner(System.in);
+		
+				Element e = new Element();
+				System.out.println("Enter the key whose size should less than 33");
+				e.key = sc.next();
+				if(e.key.length() > 32)
+				{
+					throw new Exception("Key size exceeded");
+				}
+				System.out.println("Enter the value ");
+				String val = sc.next();
+				if(map.containsKey(e.key))
+				{
+					System.out.println("Key value present");
+				}
+				else
+				{
+				map.put(e.key,val);
+				String str = JSONValue.toJSONString(map);  
+				LocalDateTime now = LocalDateTime.now();  
+				DateTimeFormatter format = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");  
+		        String t = now.format(format);  
+		        e.curr_time = t.substring(14,19);//setting the current time
+		        e.timeToLive = 3;//setting time to live in minutes
+		        String write_file = "";
+                write_file+=str+" ";
+                write_file+=e.curr_time+" ";
+                write_file+=Integer.toString(e.timeToLive);
+                writeFile(e.key,write_file);
+               // System.out.println(write_file);
+				}
+		//sc.close();
+	}
+	catch(Exception e)
+	{
+		System.out.println("Exception in create() "+e);
+	}
+	}
+}
+class Read extends Services
+{
+	void read()
+	{
+	Scanner sc = new Scanner(System.in);
+	System.out.println("Enter the key");
+	String search_key = sc.next();//Getting input for a key value to be read
+	try
+	{
+	File f = new File("datastore.txt"); 
+	String str = search(f,search_key);//Retrieving a key from file using search function 
+	if(str==null)//key not found
+		System.out.println("Key not found");
+	else
+		System.out.println(str);
+	}
+	catch(Exception e)
+	{
+		System.out.println("Exception in read "+e);
+	}
+	}
+}
+class Delete extends Services
+{
+	void delete(String delete_key)
+	{
+		Scanner sc = new Scanner(System.in);
+		//String delete_key = sc.next();
+		try
+		{
+		File f = new File("datastore.txt");
+		FileReader fr = new FileReader(f);  //Creation of File Reader object
+	    BufferedReader br = new BufferedReader(fr); //Creation of BufferedReader object
+	    BufferedWriter writer = new BufferedWriter(new FileWriter("datastore.txt"));
+	    String s;
+	      while((s=br.readLine())!=null)   
+	      {
+	         String k=getKey(s);  //getting the key 
+	        
+	                 if (k.equals(delete_key))   //Search for the given word
+	                 {
+	                	 System.out.println("Deleted "+delete_key);
+	                	// writer.write("");  
+	                	 writer.write(s.replaceAll(s," "));
+	                	 //writer.write(s + System.getProperty("line.separator"));   
+	                	    return;
+	                 }
+	      }
+		}
+		catch(Exception e)
+		{
+			System.out.println("Exception in delete "+e);
+		}
+	}
+}
+class Main
+{
+	public static void main(String[] args)
+	{
+		Scanner s = new Scanner(System.in);
+		if(!Desktop.isDesktopSupported())//check if Desktop is supported by Platform or not  
+		{  
+		System.out.println("not supported"); 
+		} 
+		System.out.println("---------------------------------");
+		System.out.println("  Operations available");
+		System.out.println("  1.Create");
+		System.out.println("  2.Read");
+		System.out.println("  3.Delete");
+		System.out.println("4.Exit");
+		System.out.println("---------------------------------");
+		boolean exit = false;
+		while(!exit)
+		{
+		System.out.println("Enter the operation");
+		String op = s.next();
+		
+		if(op.equals("Create") || op.equals("create"))
+		{
+			Create c =new Create();
+			c.create();
+		}
+		else if(op.equals("Read") || op.equals("read"))
+		{
+			Read r = new Read();
+			r.read();
+		}
+		else if(op.equals("Delete") || op.equals("delete"))
+		{
+			Delete d = new Delete();
+			System.out.println("Enter key");
+			String d_key = s.next();
+			d.delete(d_key);
+		}
+		else if(op.equals("Exit") || op.equals("exit"))
+		{
+			exit = true;
+		}
+		else
+		{
+			System.out.println("Invalid operation");
+		}
+		}
+		s.close();
+	}
+}
